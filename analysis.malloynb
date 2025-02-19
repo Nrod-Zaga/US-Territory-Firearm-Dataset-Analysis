@@ -1,7 +1,7 @@
 >>>markdown
 After reading the README, you should have a brief understanding of the data and what it represents, now lets begin to dive into analysis and insights.
 >>>malloy
-source: checks is duckdb.table('data/nicschecks.csv') extend {
+source: checks is duckdb.table('nicschecks.csv') extend {
     dimension: date_of_aquisition is strptime!date(concat(`month`, '-01'), '%Y-%m-%d')
     dimension: difference_between_hand_and_long is (handgun - long_gun)
     
