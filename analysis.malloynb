@@ -1,0 +1,388 @@
+>>>markdown
+After reading the README, you should have a brief understanding of the data and what it represents, now lets begin to dive into analysis and insights.
+>>>malloy
+source: checks is duckdb.table('data/nicschecks.csv') extend {
+    dimension: date_of_aquisition is strptime!date(concat(`month`, '-01'), '%Y-%m-%d')
+    dimension: difference_between_hand_and_long is (handgun - long_gun)
+    
+}
+>>>markdown
+1. First lets look at how many months of data we have since the data is organized by state by month
+>>>malloy
+run: checks -> {
+    aggregate: counted_months is count(date_of_aquisition)
+}
+>>>markdown
+2. We can see that we have 315 distict months of data from each of the 50 states. Now lets see the total number of rows to ensure the data is clean
+>>>malloy
+run: checks -> {
+    aggregate: counted_rows is count()
+}
+>>>markdown
+3. There are 17,325 rows which makes genral sense with the quantity of months and states/territories we have. Now lets begin to look into the numbers, lets see how many total gun related background checks have happened.
+>>>malloy
+run: checks -> {
+    aggregate: summed_guns is sum(totals)
+}
+>>>markdown
+4. From this code we can see that nearly 500 million gun related beckground checks have happened us territories in the last 315 months. Now lets look at how they are seperated within territories.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_by_state is sum(totals)
+}
+>>>markdown
+5. From this we can see that Kentucky has the most gun related background check activities within its boundaries. Lets view this in a bar chart to see the size of the upper few compared to the rest.
+>>>malloy
+# bar_chart
+run: checks -> {
+    group_by: state
+    aggregate: sum_by_state is sum(totals)
+}
+>>>markdown
+6. This bar chart helps us visualize the large disparity of gun related activites amoung territories. It helps us see how crazy high some of these places are. now lets look at a shape map to really see the spread.
+>>>malloy
+# shape_map
+run: checks -> {
+    group_by: state
+    aggregate: sum_by_state is sum(totals)
+}
+>>>markdown
+7. Now we can really see where the gun beckground check distribution is found within american territories. Now lets look into the types of guns.
+>>>malloy
+run: checks -> {
+    aggregate: sum_handgun is sum(handgun)
+    aggregate: sum_longgun is sum(long_gun)
+    aggregate: sum_other is sum(other)
+}
+>>>markdown
+8. From this we can begin to see the seperation of the types of guns that the background checks are for, this shows that generally handguns and long guns are sold sought after relativly the same and all others are far less, even when summed. Now lets look at each state and whether certain states want more of a certain type of gun.
+>>>malloy
+
+run: checks -> {
+    group_by: state
+    aggregate: sum_handgun is sum(handgun)
+    aggregate: sum_longgun is sum(long_gun)
+    aggregate: sum_other is sum(other)
+}
+>>>markdown
+9. From this we can now see the layout of the quantity of each type of gun in each state, from the top couple it does not seem there is much difference in the amount of handguns and long guns. But just out of curiousity lets look at which state has the largest seperation.
+>>>malloy
+
+run: checks -> {
+    group_by: state
+    aggregate: sum_of_difference is  sum(difference_between_hand_and_long)
+    limit: 100
+}
+>>>markdown
+10. From this we can see that Florida has a considerably more handguns being sought after with background checks than long guns, I am not sure why this is. However, on the other side Pennsylvania has considerably more long guns being sought after. After a quick google search, this makes sense since Pennsylvania is the second most hunted state in America, which generally requires long guns. Lets visualize these findings in a bar_chart to see the disparity.
+>>>malloy
+# bar_chart
+run: checks -> {
+    group_by: state
+    aggregate: sum_of_difference is  sum(difference_between_hand_and_long)
+    limit: 100
+}
+>>>markdown
+11. From this we can see that most territories have a small spread of long to hand guns, but a couple places like Florida and NewYork seem to have a larger spread. Now lets look at the data by month.
+>>>malloy
+run: checks -> {
+    group_by: date_of_aquisition.year
+    aggregate: sum_total is sum(totals)
+}
+>>>markdown
+12. This shows is the amount of gun checks happening over time but lets look at the data through a line chart to be able to visualize it better.
+>>>malloy
+
+# line_chart
+run: checks -> {
+    group_by: date_of_aquisition.year
+    aggregate: sum_total is sum(totals)
+}
+>>>markdown
+13. This chart shows us interesting data about how how many guns are sought after over time. Its incredibly interesting to see how 2020 an 2021 had a huge rise in gun background checks. I would assume this had something related to Covid-19. Lets look at the data by month to see how this lines up with covid.
+>>>malloy
+# line_chart
+run: checks -> {
+    group_by: date_of_aquisition.month
+    aggregate: sum_total is sum(totals)
+    limit:1000
+}
+>>>markdown
+14. The trend of the data seems to line up with the beginning of covid. People could have been preparing for the worst by purchasing guns and getting their background checked a lot for the purchases. Lets look at the covid cases by year to see how closely it matches up. But first lets focus the data on the years 2019-2021
+>>>malloy
+# line_chart
+run: checks -> {
+    group_by: date_of_aquisition.month
+    aggregate: sum_total is sum(totals)
+    limit:1000
+    where: `month` ~ '2019-%' or `month` ~ '2020-%' or `month` ~ '2021-%'
+}
+>>>markdown
+15. Now lets pull in a new data set of Covid Cases in the US.
+>>>malloy
+source: states is duckdb.table('States.csv') extend {
+    measure: all_cases is sum(cases)
+
+}
+>>>markdown
+16. Lets look a the data by month to see what we are looking at for our new data.
+>>>malloy
+run: states -> {
+    group_by: `date`.month, state, cases, deaths
+   -- aggregate: all_cases
+   limit:500
+}
+>>>markdown
+17. We can see that this data set organizes the total amount of cases by state on a cumulative basis. Now lets look at the yearly distribution.
+>>>malloy
+run: states -> {
+    group_by: `date`.year
+    aggregate: all_cases
+}
+>>>markdown
+18. Now we can see how many covid cases we have in the US from the years 2020-2023. Lets organize it into a line chart by month to look at the comparison with the gun checks data.
+>>>malloy
+# line_chart
+run: states -> {
+    group_by: `date`.month
+    aggregate: all_cases
+}
+>>>markdown
+19. Comparing that graph with the one below we can do our comparative time serires analysis.
+>>>malloy
+# line_chart
+run: checks -> {
+    group_by: date_of_aquisition.month
+    aggregate: sum_total is sum(totals)
+    limit:1000
+    where: `month` ~ '2019-%' or `month` ~ '2020-%' or `month` ~ '2021-%'
+}
+>>>markdown
+20. You can see here that there is a large increase in gun checks at the beginning of covid during the time of uncertainty. Looking at the beginning of covid at 2020-09, we can see the gun checks proceeds to increase quickly alongside the number of covid cases. We can see more if we group the data by states.
+>>>malloy
+run: states -> {
+    group_by: state
+    aggregate: all_cases
+}
+>>>markdown
+21. We can see here that California had the most cases alongside Texas and Florida. Lets see if the gun related activity had any correlation to this.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_by_state is sum(totals)
+}
+>>>markdown
+22. Although the top two states of Kentucky and Illinois seem to have the highest gun check activity, the three highest covid cases states are the three below it. This does show a correlation between the Covid Cases and Gun checks. Now lets see if that data changes if we restrict the dates to those of the peak of Covid
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_by_state is sum(totals)
+    where: `month` ~ '2019-%' or `month` ~ '2020-%' or `month` ~ '2021-%'
+}
+>>>markdown
+23. After only allowing the dates of peak covid, this seems to eliminate the previous correlation between covid cases and background checks. This data does closely follow the norms for background checks reagardless of year so their is still a connection to be seen based on the previous connection made. Now lets step away from covid and look at the permits checked.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_permit_checks is sum(permit)
+}
+>>>markdown
+24. This looks at the distribution of permit checks amoung the different states, its important to note that there is a lot of left out data here due to constant changing laws around gun purchasing/carrying in assorted states. Now lets look deeper.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_permit_checks is sum(permit)
+    nest: permits_by_year is {
+        group_by: date_of_aquisition.year
+        aggregate: sum_permit_checks is sum(permit)
+
+    }
+}
+>>>markdown
+25. Through this data we can find a lot of important facts to understand about this data. Such as how Kentucky changed the way they reported the permits, this led to them having zero reported permit applications or checks prior to 2006. Lets visualize the data better.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_permit_checks is sum(permit)
+    # line_chart { y.independent}
+    nest: permits_by_year is {
+        group_by: date_of_aquisition.year
+        aggregate: sum_permit_checks is sum(permit)
+
+    }
+}
+>>>markdown
+26. These graphs show us how different each United States territory is from the permits. These territories have little to no correlation as each state has its own sets of laws that govern the requirements around guns. To see the data better lets look at more graphs at once.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_permit_checks is sum(permit)
+    # line_chart {size=spark y.independent}
+    nest: permits_by_year is {
+        group_by: date_of_aquisition.year
+        aggregate: sum_permit_checks is sum(permit)
+
+    }
+}
+>>>markdown
+27. From this data, its even easier to see how different the territories are, this tells us how unconnected everyone is based on their own personal gun laws and regulations. Now lets look at how many people bought multiple guns and the organization of that amoung states and years.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_mulitples is sum(multiple)
+   
+}
+>>>markdown
+28. This shows us the states where the most multiple gun purchases was made, this further defends the claim that texas is the most gun-active US territory. Now lets look at the same data per year.
+>>>malloy
+run: checks -> {
+    group_by: date_of_aquisition.year
+    aggregate: sum_mulitples is sum(multiple)
+   
+}
+>>>markdown
+29. This data shows that the multiple gun purchases have steadily increased over the years. We can visualize it better through a line chart.
+>>>malloy
+# line_chart
+run: checks -> {
+    group_by: date_of_aquisition.year
+    aggregate: sum_mulitples is sum(multiple)
+   
+}
+>>>markdown
+30. This further shows is the steady increase with a couple of bumps. I also find it interesting how some of the larger bumps happen during election years or leading up to election years which would be a time when gun laws could change. Now lets look at which state desired the most guns under the 'other' category.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: sum_other is sum(other)
+}
+>>>markdown
+31. Upon further research, the 'other' category consists of guns that dont fall into the other categories. The most common example are assorted types of shotguns. Other than that its guns that have too short a barrel, or a pistol grip assult rifle and other unorthodox guns. The code tells us that for some reason California has the most unothodox guns. Now lets see when California, Florida, Texas, and Washington got these 'other' guns.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: other_sum is sum(other)
+    where: state = "California" or state = "Florida" or state = "Texas" or state = "Washington"
+    # line_chart {y.independent}
+    nest: by_4states is {
+        group_by: date_of_aquisition.year
+        aggregate: other_sum is sum(other)
+        where: state = "California" or state = "Florida" or state = "Texas" or state = "Washington"
+    }
+}
+>>>markdown
+32. This shows us more information about the steady increase in other guns in these 4 states. This data also connects to more gun purchases in 2020 as uncertainty was high due to the Covid Pandemic. However, the one interesting data point was California in the year 2016 had a huge spike in other weapons. Lets look at California by month to get more information about this spike.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: other_sum is sum(other)
+    where: state = "California" 
+    # line_chart
+    nest: by_4states is {
+        group_by: date_of_aquisition.month
+        aggregate: other_sum is sum(other)
+        where: state = "California" 
+    }
+}
+>>>markdown
+33. In December 2016, California experienced a significant spike in gun purchases categorized under the "Other" category due to impending legislative changes. Specifically, California introduced new laws regulating "bullet-button" rifles, which are semi-automatic firearms with magazine release mechanisms designed to comply with earlier state restrictions. These laws would change on January 1st 2017 so many people bought these guns before the legislation change. Due to the information found here, lets look at all territories to see if there were any other similar situations created from a change in legislation.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: other_sum is sum(other)
+
+    # line_chart {size=spark y.independent}
+    nest: by_4states is {
+        group_by: date_of_aquisition.year
+        aggregate: other_sum is sum(other)
+
+    }
+}
+>>>markdown
+34. Another state that saw a surge in purchases in the 'other' category is Pennsylvania, lets look at their spike by month to get more information.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: other_sum is sum(other)
+    where: state = "Pennsylvania" 
+    # line_chart
+    nest: by_4states is {
+        group_by: date_of_aquisition.month
+        aggregate: other_sum is sum(other)
+        where: state = "Pennsylvania" 
+    }
+}
+>>>markdown
+35. In late 2012, there was a tragic school shooting at Sandy Hook Elementary which led to a surge in gun purchases due to the uncertainty of potential legislation changes. The popular item was AR-15 Recievers which counted as the 'other' category. Due to the information gained from looking into surges of guns lets look at the surges in all gun related activities in all US territories to see what other insignts can be derived. 
+>>>malloy
+
+run: checks -> {
+    group_by: state
+    aggregate: sum_total is sum(totals)
+    # line_chart {y.independent}
+    nest: total_gun_activity is {
+        group_by: date_of_aquisition.month
+        aggregate: sum_total is sum(totals)
+    }
+}
+>>>markdown
+36. The largest spike I found was from North Carolina in early 2014. Lets look at the spread of what this large number is comprised of.
+>>>malloy
+run: checks -> {
+    group_by: 
+        state
+        date_of_aquisition.year
+    aggregate:
+        sum_total is sum(totals)
+        sum_hand is sum(handgun)
+        sum_long is sum(long_gun)
+        sum_multiple is sum(multiple)
+        sum_other is sum(other)
+        sum_permit is sum(permit)
+
+
+    where: state = "North Carolina"
+    
+}
+>>>markdown
+37. From this we can see there is a abnormally large number of permit checks during this year which caused the majority of the spike. This was mostly because of the huge increase in interest of concealed carry permits in the state which caused this large spike in gun related activities.
+>>>markdown
+38. Another major spike I found was from 2010-2011 in Utah. Lets look at this spike in greater detail.
+>>>malloy
+run: checks -> {
+    group_by: 
+        state
+        date_of_aquisition.year
+    aggregate:
+        sum_total is sum(totals)
+        sum_hand is sum(handgun)
+        sum_long is sum(long_gun)
+        sum_multiple is sum(multiple)
+        sum_other is sum(other)
+        sum_permit is sum(permit)
+
+
+    where: state = "Utah"
+    
+}
+>>>markdown
+39. This was also seemingly due to a large number of permits. Upon further research, during 2010–2011, fears of potential gun control measures under the Obama administration were prominent among gun owners and enthusiasts, and Utah has a large gun owning culture that spiked these purchases and newfound permits. Also, Utah's permits allowed concealed carry in 30 states which made them highly sought after.
+>>>markdown
+40. For the last point lets look at the spike found in Oregon at the end of 2022.
+>>>malloy
+run: checks -> {
+    group_by: state
+    aggregate: total_sum is sum(totals)
+    where: state = "Oregon" 
+    # line_chart
+    nest: by_4states is {
+        group_by: date_of_aquisition.month
+        aggregate: total_sum is sum(totals)
+        where: state = "Oregon" 
+    }
+}
+>>>markdown
+41. Upon further research, Measure 114, also known as the Reduction of Gun Violence Act, was passed by Oregon voters in the November 2022 election. This led to a surge of buying guns before the new restrictions took place.
+>>>markdown
+Thank You for Enjoying this Dataset With Me!
