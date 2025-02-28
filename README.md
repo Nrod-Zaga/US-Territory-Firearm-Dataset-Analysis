@@ -38,19 +38,6 @@ The authors of that *NYT* analysis [describe how they used the NICS data to esti
 
 ![NICS Background Check Totals — Past 36 Months](charts/total-checks-36-months.png)
 
-## Run The Parser Yourself
 
-All the necessary code is open-source. If you'd like to run the parser yourself, you'll need:
 
-- Python 3.x
-- The libraries listed in [`requirements.txt`](requirements.txt)
 
-Then run `make all`. (See the [`Makefile`](Makefile) to view the individual commands.)
-
-## Questions / Feedback / Improvements
-
-File [an issue](issues), or email jsvine@gmail.com.
-
-## Credits
-
-This open-source repository was created by Jeremy Singer-Vine ([@jsvine](https://github.com/jsvine)) at BuzzFeed News in 2015. In 2023, [BuzzFeed News shut down](https://www.buzzfeednews.com/). In April 2024, Singer-Vine forked this repository to the [Data Liberation Project](https://www.data-liberation-project.org/)'s [GitHub organization](https://github.com/data-liberation-project).
